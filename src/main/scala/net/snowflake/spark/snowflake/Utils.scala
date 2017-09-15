@@ -193,7 +193,7 @@ object Utils {
   private def mapFromSource(src: Source): Map[String, String] = {
     var map = new mutable.HashMap[String, String]
     for (line <- src.getLines()) {
-      val tokens = line.split("=")
+      val tokens = line.split(" = ")
       assert(tokens.length == 2, "Can't parse this line: " + line)
       val key = tokens(0).trim.toLowerCase
       val value = tokens(1).trim

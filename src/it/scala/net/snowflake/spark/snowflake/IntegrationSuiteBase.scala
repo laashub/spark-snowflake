@@ -46,11 +46,17 @@ trait IntegrationSuiteBase
 
   /** We read config from this file */
   private final val CONFIG_FILE_VARIABLE = "IT_SNOWFLAKE_CONF"
+  private final val AZ_CONFIG_FILE_VARIABLE = "IT_SNOWFLAKE_CONF_AZ"
+
+  protected var IS_AZURE = false
 
   protected def loadConfig(): Map[String, String] = {
-    val fname = System.getenv(CONFIG_FILE_VARIABLE)
+    val confVariable =
+      if (IS_AZURE) AZ_CONFIG_FILE_VARIABLE else CONFIG_FILE_VARIABLE
+
+    val fname = System.getenv(confVariable)
     if (fname == null)
-      fail(s"Must set $CONFIG_FILE_VARIABLE environment variable")
+      fail(s"Must set $confVariable environment variable")
     Utils.readMapFromFile(sc, fname)
   }
 
@@ -75,6 +81,10 @@ trait IntegrationSuiteBase
   protected var AWS_SECRET_ACCESS_KEY: String = _
   // Path to a directory in S3 (e.g. 's3n://bucket-name/path/to/scratch/space').
   private var AWS_S3_SCRATCH_SPACE: String = _
+
+  // Azure access variables
+  protected var AZURE_STORAGE_ACCOUNT: String = _
+  protected var AZURE_STORAGE_KEY: String = _
 
   /**
     * Random suffix appended appended to table and directory names in order to avoid collisions
@@ -121,25 +131,33 @@ trait IntegrationSuiteBase
       case (key, value) => s"""$key "$value""""
     }.mkString(" , ")
 
-    AWS_ACCESS_KEY_ID = getConfigValue("awsAccessKey", false)
-    AWS_SECRET_ACCESS_KEY = getConfigValue("awsSecretKey", false)
-    AWS_S3_SCRATCH_SPACE = getConfigValue("tempDir", false)
+    if (!IS_AZURE) {
+      AWS_ACCESS_KEY_ID = getConfigValue("awsAccessKey", false)
+      AWS_SECRET_ACCESS_KEY = getConfigValue("awsSecretKey", false)
+      AWS_S3_SCRATCH_SPACE = getConfigValue("tempDir", false)
 
-    if (AWS_S3_SCRATCH_SPACE != null) {
-      require(AWS_S3_SCRATCH_SPACE.startsWith("s3n://") || AWS_S3_SCRATCH_SPACE
-                .startsWith("file://"),
-              "must use s3n:// or file:// URL")
-      tempDir = params.rootTempDir + randomSuffix + "/"
-    }
+      if (AWS_S3_SCRATCH_SPACE != null) {
+        require(AWS_S3_SCRATCH_SPACE.startsWith("s3n://") || AWS_S3_SCRATCH_SPACE
+          .startsWith("file://"),
+          "must use s3n:// or file:// URL")
+        tempDir = params.rootTempDir + randomSuffix + "/"
+      }
 
-    // Bypass Hadoop's FileSystem caching mechanism so that we don't cache the credentials:
-    sc.hadoopConfiguration.setBoolean("fs.s3.impl.disable.cache", true)
-    sc.hadoopConfiguration.setBoolean("fs.s3n.impl.disable.cache", true)
+      // Bypass Hadoop's FileSystem caching mechanism so that we don't cache the credentials:
+      sc.hadoopConfiguration.setBoolean("fs.s3.impl.disable.cache", true)
+      sc.hadoopConfiguration.setBoolean("fs.s3n.impl.disable.cache", true)
 
-    if (AWS_SECRET_ACCESS_KEY != null && AWS_ACCESS_KEY_ID != null) {
-      sc.hadoopConfiguration.set("fs.s3n.awsAccessKeyId", AWS_ACCESS_KEY_ID)
-      sc.hadoopConfiguration
-        .set("fs.s3n.awsSecretAccessKey", AWS_SECRET_ACCESS_KEY)
+      if (AWS_SECRET_ACCESS_KEY != null && AWS_ACCESS_KEY_ID != null) {
+        sc.hadoopConfiguration.set("fs.s3n.awsAccessKeyId", AWS_ACCESS_KEY_ID)
+        sc.hadoopConfiguration
+          .set("fs.s3n.awsSecretAccessKey", AWS_SECRET_ACCESS_KEY)
+      }
+    } else {
+      AZURE_STORAGE_ACCOUNT = getConfigValue("azurestorageaccount", false)
+      AZURE_STORAGE_KEY = getConfigValue("azurestoragekey", false)
+
+      sc.hadoopConfiguration.set("fs.azure", "org.apache.hadoop.fs.azure.NativeAzureFileSystem")
+      sc.hadoopConfiguration.set(s"fs.azure.account.key.$AZURE_STORAGE_ACCOUNT.blob.core.windows.net", AZURE_STORAGE_KEY)
     }
     conn = DefaultJDBCWrapper.getConnector(params)
 

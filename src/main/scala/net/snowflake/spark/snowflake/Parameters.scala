@@ -64,6 +64,8 @@ object Parameters {
   val PARAM_POSTACTIONS        = knownParam("postactions")
   val PARAM_AWS_SECRET_KEY     = knownParam("awssecretkey")
   val PARAM_AWS_ACCESS_KEY     = knownParam("awsaccesskey")
+  val PARAM_AZURE_STORAGE_ACCOUNT     = knownParam("azurestorageaccount")
+  val PARAM_AZURE_STORAGE_KEY     = knownParam("azurestoragekey")
   val PARAM_USE_STAGING_TABLE  = knownParam("usestagingtable")
   val PARAM_EXTRA_COPY_OPTIONS = knownParam("extracopyoptions")
 
