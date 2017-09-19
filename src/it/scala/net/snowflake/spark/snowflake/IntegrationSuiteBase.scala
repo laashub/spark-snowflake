@@ -156,6 +156,8 @@ trait IntegrationSuiteBase
       AZURE_STORAGE_ACCOUNT = getConfigValue("azurestorageaccount", false)
       AZURE_STORAGE_KEY = getConfigValue("azurestoragekey", false)
 
+      tempDir = params.rootTempDir + randomSuffix + "/"
+
       sc.hadoopConfiguration.set("fs.azure", "org.apache.hadoop.fs.azure.NativeAzureFileSystem")
       sc.hadoopConfiguration.set(s"fs.azure.account.key.$AZURE_STORAGE_ACCOUNT.blob.core.windows.net", AZURE_STORAGE_KEY)
     }

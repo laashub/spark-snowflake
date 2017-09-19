@@ -58,7 +58,7 @@ object SparkSnowflakeBuild extends Build {
         "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
       libraryDependencies ++= Seq(
         "org.slf4j" % "slf4j-api" % "1.7.5",
-        "net.snowflake" % "snowflake-jdbc" % "3.0.17",
+        "net.snowflake" % "snowflake-jdbc" % "3.2.2" from "file:///home/vagrant/jarlib/snowflake-jdbc.jar",
         // These Amazon SDK depdencies are marked as 'provided' in order to reduce the risk of
         // dependency conflicts with other user libraries. In many environments, such as EMR and
         // Databricks, the Amazon SDK will already be on the classpath. In other cases, the SDK is
@@ -72,7 +72,7 @@ object SparkSnowflakeBuild extends Build {
         "com.amazonaws" % "aws-java-sdk-core" % "1.10.22" % "provided" exclude("com.fasterxml.jackson.core", "jackson-databind"),
         "com.amazonaws" % "aws-java-sdk-s3" % "1.10.22" % "provided" exclude("com.fasterxml.jackson.core", "jackson-databind"),
         "com.amazonaws" % "aws-java-sdk-sts" % "1.10.22" % "test" exclude("com.fasterxml.jackson.core", "jackson-databind"),
-        "com.microsoft.azure" % "azure-storage" % "5.0.0" % "provided" exclude("com.fasterxml.jackson.core", "jackson-databind"),
+        "com.microsoft.azure" % "azure-storage" % "2.2.0" % "provided" exclude("com.fasterxml.jackson.core", "jackson-databind"),
         // We require spark-avro, but avro-mapred must be provided to match Hadoop version.
         // In most cases, avro-mapred will be provided as part of the Spark assembly JAR.
         // "com.databricks" %% "spark-avro" % "2.0.1",

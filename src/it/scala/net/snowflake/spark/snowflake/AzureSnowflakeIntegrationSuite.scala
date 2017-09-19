@@ -25,11 +25,7 @@ package net.snowflake.spark.snowflake
   */
 class AzureSnowflakeIntegrationSuite extends SnowflakeIntegrationSuite {
 
+  // Set azure to be true and test should just run.
   IS_AZURE = true
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-
-    // do nothing
-  }
 }
