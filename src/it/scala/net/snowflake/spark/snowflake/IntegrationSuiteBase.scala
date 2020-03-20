@@ -219,6 +219,8 @@ trait IntegrationSuiteBase
     // Verify the query issued is what we expect
     checkAnswer(result, expectedAnswer)
 
+    println(Utils.getLastSelect)
+
     if (!bypass) {
       assert(
         Utils.getLastSelect.replaceAll("\\s+", "").toLowerCase == reference.trim

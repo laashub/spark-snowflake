@@ -600,6 +600,151 @@ class SnowflakeResultSetRDDSuite extends IntegrationSuiteBase {
     }
   }
 
+  test("test normal LIKE pushdown 1") {
+    // Table values in test_table_like
+    // ('John  Dddoe'), ('Joe   Doe'), ('John_down'),
+    // ('Joe down'), ('Elaine'), (''), (null),
+    // ('100 times'), ('1000 times'), ('100%')
+
+    // Normal LIKE: subject like '%Jo%oe%'
+    val result1 = sparkSession.sql(
+      s"select * from test_table_like where subject like '%Jo%oe%' order by 1")
+
+    val expectedResult1 = Seq(
+      Row("Joe   Doe"), Row("John  Dddoe")
+    )
+
+    testPushdown(
+      s"""SELECT * FROM ( SELECT * FROM ( SELECT * FROM ( $test_table_like )
+         |AS "SF_CONNECTOR_QUERY_ALIAS" ) AS "SUBQUERY_0" WHERE ( (
+         |"SUBQUERY_0"."SUBJECT" IS NOT NULL ) AND "SUBQUERY_0"."SUBJECT"
+         |LIKE '%Jo%oe%' ) ) AS "SUBQUERY_1" ORDER BY ( "SUBQUERY_1"."SUBJECT" ) ASC
+         |""".stripMargin,
+      result1,
+      expectedResult1
+    )
+  }
+
+  test("test normal LIKE pushdown 2") {
+    // Table values in test_table_like
+    // ('John  Dddoe'), ('Joe   Doe'), ('John_down'),
+    // ('Joe down'), ('Elaine'), (''), (null),
+    // ('100 times'), ('1000 times'), ('100%')
+
+    // Normal LIKE: subject like '%Jo%oe%'
+    val result1 = sparkSession.sql(
+      s"select * from test_table_like where subject like '100%' order by 1")
+
+    val expectedResult1 = Seq(
+      Row("100 times"), Row("100%"), Row("1000 times")
+    )
+
+    testPushdown(
+      s"""SELECT * FROM ( SELECT * FROM ( SELECT * FROM ( $test_table_like )
+         |AS "SF_CONNECTOR_QUERY_ALIAS" ) AS "SUBQUERY_0" WHERE ( (
+         |"SUBQUERY_0"."SUBJECT" IS NOT NULL ) AND "SUBQUERY_0"."SUBJECT"
+         |LIKE '100%' ) ) AS "SUBQUERY_1" ORDER BY ( "SUBQUERY_1"."SUBJECT" ) ASC
+         |""".stripMargin,
+      result1,
+      expectedResult1
+    )
+  }
+
+  test("test normal NOT LIKE pushdown") {
+    // Table values in test_table_like
+    // ('John  Dddoe'), ('Joe   Doe'), ('John_down'),
+    // ('Joe down'), ('Elaine'), (''), (null),
+    // ('100 times'), ('1000 times'), ('100%')
+
+    // Normal NOT LIKE: subject not like '%Jo%oe%'
+    val result2 = sparkSession.sql(
+      s"select * from test_table_like where subject not like '%Jo%oe%' order by 1")
+
+    val expectedResult2 = Seq(
+      Row(""), Row("100 times"), Row("100%"), Row("1000 times"),
+      Row("Elaine"), Row("Joe down"), Row("John_down")
+    )
+
+    testPushdown(
+      s"""SELECT * FROM ( SELECT * FROM ( SELECT * FROM ( $test_table_like )
+         |AS "SF_CONNECTOR_QUERY_ALIAS" ) AS "SUBQUERY_0" WHERE ( (
+         |"SUBQUERY_0"."SUBJECT" IS NOT NULL ) AND NOT ( "SUBQUERY_0"."SUBJECT"
+         |LIKE '%Jo%oe%' ) ) ) AS "SUBQUERY_1" ORDER BY ( "SUBQUERY_1"."SUBJECT" ) ASC
+         |""".stripMargin,
+      result2,
+      expectedResult2
+    )
+  }
+
+  // This is supported from Spark 3.0
+  test("test LIKE with ESCAPE pushdown") {
+    // LIKE with ESCAPE: subject like '%J%h%^_do%' escape '^'
+    var df = sparkSession
+      .sql(s"select * from test_table_like where subject like '%J%h%^_do%'")
+      .show()
+
+    df = sparkSession
+      .sql(s"select * from test_table_like where subject like '%J%h%^_do%' escape '^'")
+      .show()
+
+    // NOT LIKE with ESCAPE: subject like '%J%h%^_do%' escape '^'
+    df = sparkSession
+      .sql(s"select * from test_table_like where subject not like '%J%h%^_do%' escape '^'")
+      .show()
+  }
+
+  test("test LIKE with ESCAPE pushdown 1") {
+    // Table values in test_table_like
+    // ('John  Dddoe'), ('Joe   Doe'), ('John_down'),
+    // ('Joe down'), ('Elaine'), (''), (null),
+    // ('100 times'), ('1000 times'), ('100%')
+
+    // Normal NOT LIKE: subject not like '%Jo%oe%'
+    val result2 = sparkSession.sql(
+      s"select * from test_table_like where subject like '%J%h%^_do%' escape '^' order by 1")
+
+    val expectedResult2 = Seq(
+      Row("John_down")
+    )
+
+    testPushdown(
+      s"""SELECT * FROM ( SELECT * FROM ( SELECT * FROM ( $test_table_like ) AS
+         |"SF_CONNECTOR_QUERY_ALIAS" ) AS "SUBQUERY_0" WHERE ( (
+         |"SUBQUERY_0"."SUBJECT" IS NOT NULL ) AND "SUBQUERY_0"."SUBJECT"
+         |LIKE '%J%h%^_do%' ESCAPE '^' ) ) AS "SUBQUERY_1" ORDER BY
+         |( "SUBQUERY_1"."SUBJECT" ) ASC
+         |""".stripMargin,
+      result2,
+      expectedResult2
+    )
+  }
+
+  test("test LIKE with ESCAPE pushdown 2") {
+    // Table values in test_table_like
+    // ('John  Dddoe'), ('Joe   Doe'), ('John_down'),
+    // ('Joe down'), ('Elaine'), (''), (null),
+    // ('100 times'), ('1000 times'), ('100%')
+
+    // Normal NOT LIKE: like '100^%' escape '^'
+    val result2 = sparkSession.sql(
+      s"select * from test_table_like where subject like '100^%' escape '^' order by 1")
+
+    val expectedResult2 = Seq(
+      Row("100%")
+    )
+
+    testPushdown(
+      s"""SELECT * FROM ( SELECT * FROM ( SELECT * FROM ( $test_table_like ) AS
+         |"SF_CONNECTOR_QUERY_ALIAS" ) AS "SUBQUERY_0" WHERE ( (
+         |"SUBQUERY_0"."SUBJECT" IS NOT NULL ) AND "SUBQUERY_0"."SUBJECT"
+         |like '100^%' escape '^' ) ) AS "SUBQUERY_1" ORDER BY
+         |( "SUBQUERY_1"."SUBJECT" ) ASC
+         |""".stripMargin,
+      result2,
+      expectedResult2
+    )
+  }
+
   test("testDoubleINF") {
     val tmpDF = sparkSession
       .sql(s"select * from test_table_inf")
