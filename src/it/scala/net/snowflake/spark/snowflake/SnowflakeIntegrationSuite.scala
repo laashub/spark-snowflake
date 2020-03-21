@@ -90,6 +90,14 @@ class SnowflakeIntegrationSuite extends IntegrationSuiteBase {
          """.stripMargin)
 
     conn.commit()
+
+    val tmpdf = sparkSession.read
+      .format(SNOWFLAKE_SOURCE_NAME)
+      .options(connectorOptionsNoTable)
+      .option("dbtable", s"$test_table")
+      .load()
+
+    tmpdf.createOrReplaceTempView("test_table")
   }
 
   override def afterAll(): Unit = {
